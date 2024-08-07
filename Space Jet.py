@@ -1,5 +1,6 @@
 import pygame
 import random
+from pygame import mixer
 
 #Initializin pygame
 pygame.init()
@@ -17,6 +18,10 @@ pygame.display.set_icon(icon)
 #background
 Background=pygame.image.load('Background.jpg')
 
+# Sound
+mixer.music.load("back.mp3")
+mixer.music.play(-1)
+
 #player
 playerimg=pygame.image.load('spaceship.png')
 playerX=400
@@ -25,7 +30,7 @@ playerX_change=0
 
 #fix change value
 player_change_val=1
-enemy_change_val=0.4
+enemy_change_val=0.7
 
 #enemy images
 def load_enemy_image():
@@ -61,6 +66,12 @@ font = pygame.font.Font('freesansbold.ttf', 30)
 textX = 340
 testY = 10
 
+#a variable whose main aim is to check the score for further use in increasing enemy's speed
+total=0
+
+#game over
+game_over_txt=pygame.font.Font('freesansbold.ttf',64)
+
 
 def player(x,y):
     screen.blit(playerimg,(x,y))
@@ -80,11 +91,27 @@ def show_score(x, y):
     score = font.render("Score: " + str(score_val), True, (255, 255, 255))
     screen.blit(score, (x, y))
 
-    
-    
+def change_enemy_speed():
+    global enemy_change_val
+    global total
+    total=0
+    enemy_change_val+=0.3
+
+def game_over():
+    game_over=game_over_txt.render("GAME OVER" , True , (255,255,255) )
+    screen.blit(game_over , (200,200))
+
 #main game
 
+# Flag to track if the game-over sound has been played
+game_over_sound_played = False    
+
+#check whether game is over or not
+game_over_status=False
+
+#status of our game
 status = True
+
 while status:
 
     screen.fill((0,0,0))
@@ -106,6 +133,8 @@ while status:
             #checking whether space bar is pressed
             if event.key==pygame.K_SPACE:
                 if bullet_state=='off':
+                    bulletSound = mixer.Sound("laser.wav")
+                    bulletSound.play()
                     bulletX=playerX
                     bullet(bulletX,bulletY)
         #check whether pressed key is removed
@@ -127,39 +156,55 @@ while status:
     #initializing position of player
     player(playerX,playerY)
 
+    if not game_over_status:
+         #ENEMY
+        for i in range(total_enemies):
 
-     #ENEMY
-    for i in range(total_enemies):
-
-        #changing position of enemy
-        enemyX[i]=enemyX[i]+enemyX_change[i]
-
-        #whwn enemy touches right boundary
-        if enemyX[i]>=745:
-            enemyX_change[i]=-enemy_change_val
-            enemyX[i]=745
-
-        #when enemy touches the left boundry
-        if enemyX[i]<0:
-            enemyX[i]=0
-            enemyX_change[i]=enemy_change_val
-            enemyY[i]+=50 #enemy comes near to our player (position downward)
-
-        #initialize position of enemy
-        enemy(enemyX[i],enemyY[i] , i)
+            #calculate distance between enemy and player
+            distance1=distance_calculator(playerX,playerY,enemyX[i],enemyY[i])
 
 
-        #calculare distance between bullet and enemy
-        distance=distance_calculator(bulletX,bulletY,enemyX[i],enemyY[i])
+            if distance1 < 50:
+                game_over_status = True
+                for j in range(total_enemies):
+                    enemyY=5000
+                break
 
-         #COLLISION
-        if distance<30:
-            score_val+=1
-            bullet_state='off'
-            bulletY=400
-            enemyX[i]=random.randint(0,745)
-            enemyY[i]=random.randint(50,150)
-            enemyimg[i] = load_enemy_image()  # Load a new enemy image after a hit
+            #changing position of enemy
+            enemyX[i]=enemyX[i]+enemyX_change[i]
+
+            #whwn enemy touches right boundary
+            if enemyX[i]>=745:
+                enemyX_change[i]=-enemy_change_val
+                enemyX[i]=745
+
+            #when enemy touches the left boundry
+            if enemyX[i]<0:
+                enemyX[i]=0
+                enemyX_change[i]=enemy_change_val
+                enemyY[i]+=50 #enemy comes near to our player (position downward)
+
+            #initialize position of enemy
+            enemy(enemyX[i],enemyY[i] , i)
+
+
+            #calculare distance between bullet and enemy
+            distance2=distance_calculator(bulletX,bulletY,enemyX[i],enemyY[i])
+
+             #COLLISION
+            if distance2<30:
+                explosionSound = mixer.Sound("explosion.wav")
+                explosionSound.play()
+                score_val+=1
+                total+=1
+                bullet_state='off'
+                bulletY=400
+                enemyX[i]=random.randint(0,745)
+                enemyY[i]=random.randint(50,150)
+                enemyimg[i] = load_enemy_image()  # Load a new enemy image after a hit
+
+
+            
 
     
      #BULLET
@@ -171,10 +216,23 @@ while status:
         bulletY-=bulletY_change
         bullet(bulletX,bulletY)
 
-    
+    # Display "GAME OVER" text if game over condition is met
+    if game_over_status:
+        game_over()
+        # Play game-over sound only once
+        if not game_over_sound_played:
+                game_over_sound = mixer.Sound("game over.mp3")
+                game_over_sound.play()
+                game_over_sound_played = True
+        
 
-    
+
+    #showing score
     show_score(textX, testY)
+
+    if total>6 and enemy_change_val<1.4:
+        change_enemy_speed()
+    
     pygame.display.update()
 
 
