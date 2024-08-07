@@ -30,7 +30,7 @@ playerX_change=0
 
 #fix change value
 player_change_val=1
-enemy_change_val=0.7
+enemy_change_val=0.8
 
 #enemy images
 def load_enemy_image():
